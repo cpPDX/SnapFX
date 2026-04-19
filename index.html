@@ -257,6 +257,7 @@ function renderFilters() {
     div.innerHTML = `<div class="fi">${f.e}${f.sc?'<span class="badge sc">SC</span>':f.tt?'<span class="badge tt">TT</span>':''}</div><div class="fn">${f.name}</div>`;
     div.onclick = () => {
       activeFilter = f.id;
+      particles.length = 0;
       document.querySelectorAll('.fb').forEach(b => b.classList.remove('on'));
       div.classList.add('on');
       const label = f.e + ' ' + f.name;
