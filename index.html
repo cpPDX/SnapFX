@@ -162,7 +162,11 @@ let activeFilter = 'none';
 let intensity    = 0.85;
 let time         = 0;
 let animId       = null;
+let savedBlob    = null;
 let savedDataUrl = '';
+let frozen       = false;
+let lastFaceTime = 0;
+const pixelCache = { imageData: null, frame: -1, filterId: '' };
 
 const particles = [];
 const glitter   = Array.from({length:120}, () => ({
@@ -257,6 +261,7 @@ function renderFilters() {
     div.innerHTML = `<div class="fi">${f.e}${f.sc?'<span class="badge sc">SC</span>':f.tt?'<span class="badge tt">TT</span>':''}</div><div class="fn">${f.name}</div>`;
     div.onclick = () => {
       activeFilter = f.id;
+      particles.length = 0;
       document.querySelectorAll('.fb').forEach(b => b.classList.remove('on'));
       div.classList.add('on');
       const label = f.e + ' ' + f.name;
@@ -323,6 +328,7 @@ function initTracker() {
     tracking.track(video, tracker, {camera:true});
     tracker.on('track', ev => {
       if (!ev.data.length) return;
+      lastFaceTime = Date.now();
       const face = ev.data[0];
       const vw = video.videoWidth, vh = video.videoHeight;
       const raw = {x:1-(face.x+face.width)/vw, y:face.y/vh, w:face.width/vw, h:face.height/vh};
@@ -336,12 +342,22 @@ function initTracker() {
 
 // ─── Render loop ──────────────────────────────────────────────────────────────
 function startLoop() {
+  lastFaceTime = Date.now();
   function loop() {
-    time++;
+    time = (time + 1) % 1000000;
     const W = canvas.width, H = canvas.height;
-    if (video.readyState >= 2) {
+    if (video.readyState >= 2 && !frozen) {
       ctx.save(); ctx.scale(-1,1); ctx.drawImage(video,-W,0,W,H); ctx.restore();
-      if (activeFilter !== 'none') drawFilter(W, H, faceData);
+      if (activeFilter !== 'none') {
+        const staleness = lastFaceTime === 0 ? 1 : Math.min(1, (Date.now() - lastFaceTime) / 1500);
+        const trackingAlpha = 1 - staleness;
+        if (trackingAlpha > 0) {
+          ctx.save();
+          ctx.globalAlpha = trackingAlpha;
+          drawFilter(W, H, faceData);
+          ctx.restore();
+        }
+      }
     }
     animId = requestAnimationFrame(loop);
   }
@@ -609,18 +625,24 @@ function drawFilter(W, H, fd) {
 
   if (f==='cartoon') {
     const rx=Math.max(0,Math.round(x-w*.15)),ry2=Math.max(0,Math.round(y-h*.1));const rw=Math.min(W-rx,Math.round(w*1.3)),rh=Math.min(H-ry2,Math.round(h*1.2));
-    if(rw>0&&rh>0){const id=ctx.getImageData(rx,ry2,rw,rh);const d=id.data;const step=256/5;for(let i=0;i<d.length;i+=4){d[i]=Math.round(d[i]/step)*step;d[i+1]=Math.round(d[i+1]/step)*step;d[i+2]=Math.round(d[i+2]/step)*step;}ctx.save();ctx.globalAlpha=int;ctx.putImageData(id,rx,ry2);ctx.restore();}
+    if(rw>0&&rh>0){
+      if(time%2===0||pixelCache.frame!==time-1||pixelCache.filterId!==f){const id=ctx.getImageData(rx,ry2,rw,rh);const d=id.data;const step=256/5;for(let i=0;i<d.length;i+=4){d[i]=Math.round(d[i]/step)*step;d[i+1]=Math.round(d[i+1]/step)*step;d[i+2]=Math.round(d[i+2]/step)*step;}pixelCache.imageData=id;pixelCache.frame=time;pixelCache.filterId=f;ctx.save();ctx.globalAlpha=int;ctx.putImageData(id,rx,ry2);ctx.restore();}
+      else if(pixelCache.imageData){ctx.save();ctx.globalAlpha=int;ctx.putImageData(pixelCache.imageData,rx,ry2);ctx.restore();}
+    }
     ctx.save();ctx.globalAlpha=int*.5;ctx.strokeStyle='rgba(0,0,0,.7)';ctx.lineWidth=2.5;ctx.beginPath();ctx.ellipse(cx,cy,s*.5,s*.6,0,0,Math.PI*2);ctx.stroke();ctx.restore();
   }
 
   if (f==='pixel') {
     const px=Math.max(4,Math.round(8+int*18));const rx=Math.max(0,Math.round(x-w*.15)),ry2=Math.max(0,Math.round(y-h*.1));const rw=Math.min(W-rx,Math.round(w*1.3)),rh=Math.min(H-ry2,Math.round(h*1.2));
-    if(rw>0&&rh>0){const id=ctx.getImageData(rx,ry2,rw,rh);const d=id.data;ctx.save();ctx.globalAlpha=int;for(let py=0;py<rh;py+=px)for(let pxx=0;pxx<rw;pxx+=px){const i=(py*rw+pxx)*4;ctx.fillStyle=`rgb(${d[i]},${d[i+1]},${d[i+2]})`;ctx.fillRect(rx+pxx,ry2+py,px,px);}ctx.restore();}
+    if(rw>0&&rh>0){
+      if(time%2===0||pixelCache.frame!==time-1||pixelCache.filterId!==f){const id=ctx.getImageData(rx,ry2,rw,rh);const d=id.data;pixelCache.imageData=id;pixelCache.frame=time;pixelCache.filterId=f;ctx.save();ctx.globalAlpha=int;for(let py=0;py<rh;py+=px)for(let pxx=0;pxx<rw;pxx+=px){const i=(py*rw+pxx)*4;ctx.fillStyle=`rgb(${d[i]},${d[i+1]},${d[i+2]})`;ctx.fillRect(rx+pxx,ry2+py,px,px);}ctx.restore();}
+      else if(pixelCache.imageData){const id=pixelCache.imageData;const d=id.data;ctx.save();ctx.globalAlpha=int;for(let py=0;py<rh;py+=px)for(let pxx=0;pxx<rw;pxx+=px){const i=(py*rw+pxx)*4;ctx.fillStyle=`rgb(${d[i]},${d[i+1]},${d[i+2]})`;ctx.fillRect(rx+pxx,ry2+py,px,px);}ctx.restore();}
+    }
   }
 
   if (f==='noir') {
-    const id=ctx.getImageData(0,0,W,H);const d=id.data;for(let i=0;i<d.length;i+=4){const gray=d[i]*.3+d[i+1]*.59+d[i+2]*.11;const c=Math.max(0,Math.min(255,(gray-128)*1.5+128));d[i]=d[i+1]=d[i+2]=c;}
-    ctx.save();ctx.globalAlpha=int;ctx.putImageData(id,0,0);ctx.globalAlpha=int*.55;const vg=ctx.createRadialGradient(W/2,H/2,H*.2,W/2,H/2,H*.75);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.8)');ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);ctx.restore();
+    if(time%2===0||pixelCache.frame!==time-1||pixelCache.filterId!==f){const id=ctx.getImageData(0,0,W,H);const d=id.data;for(let i=0;i<d.length;i+=4){const gray=d[i]*.3+d[i+1]*.59+d[i+2]*.11;const c=Math.max(0,Math.min(255,(gray-128)*1.5+128));d[i]=d[i+1]=d[i+2]=c;}pixelCache.imageData=id;pixelCache.frame=time;pixelCache.filterId=f;ctx.save();ctx.globalAlpha=int;ctx.putImageData(id,0,0);ctx.globalAlpha=int*.55;const vg=ctx.createRadialGradient(W/2,H/2,H*.2,W/2,H/2,H*.75);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.8)');ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);ctx.restore();}
+    else if(pixelCache.imageData){ctx.save();ctx.globalAlpha=int;ctx.putImageData(pixelCache.imageData,0,0);ctx.globalAlpha=int*.55;const vg=ctx.createRadialGradient(W/2,H/2,H*.2,W/2,H/2,H*.75);vg.addColorStop(0,'rgba(0,0,0,0)');vg.addColorStop(1,'rgba(0,0,0,.8)');ctx.fillStyle=vg;ctx.fillRect(0,0,W,H);ctx.restore();}
   }
 
   if (f==='dreamy') {
@@ -639,37 +661,57 @@ function drawFilter(W, H, fd) {
 
   if (f==='fisheye') {
     const rx=Math.max(0,Math.round(x-w*.2)),ry2=Math.max(0,Math.round(y-h*.15));const rw=Math.min(W-rx,Math.round(w*1.4)),rh=Math.min(H-ry2,Math.round(h*1.3));
-    if(rw>4&&rh>4){const src=ctx.getImageData(rx,ry2,rw,rh);const dst=ctx.createImageData(rw,rh);const fcx=rw/2,fcy=rh/2,maxR=Math.min(fcx,fcy);
-    for(let py=0;py<rh;py++){for(let px2=0;px2<rw;px2++){const nx=(px2-fcx)/maxR,ny=(py-fcy)/maxR;const r=Math.sqrt(nx*nx+ny*ny);if(r<=1){const theta=Math.atan2(ny,nx),rr=r*r*int+r*(1-int);const sx2=Math.round(Math.cos(theta)*rr*maxR+fcx),sy2=Math.round(Math.sin(theta)*rr*maxR+fcy);if(sx2>=0&&sx2<rw&&sy2>=0&&sy2<rh){const si=(sy2*rw+sx2)*4,di=(py*rw+px2)*4;dst.data[di]=src.data[si];dst.data[di+1]=src.data[si+1];dst.data[di+2]=src.data[si+2];dst.data[di+3]=src.data[si+3];}}}}
-    ctx.save();ctx.globalAlpha=int;ctx.putImageData(dst,rx,ry2);ctx.restore();}
+    if(rw>4&&rh>4){
+      if(time%2===0||pixelCache.frame!==time-1||pixelCache.filterId!==f){const src=ctx.getImageData(rx,ry2,rw,rh);const dst=ctx.createImageData(rw,rh);const fcx=rw/2,fcy=rh/2,maxR=Math.min(fcx,fcy);for(let py=0;py<rh;py++){for(let px2=0;px2<rw;px2++){const nx=(px2-fcx)/maxR,ny=(py-fcy)/maxR;const r=Math.sqrt(nx*nx+ny*ny);if(r<=1){const theta=Math.atan2(ny,nx),rr=r*r*int+r*(1-int);const sx2=Math.round(Math.cos(theta)*rr*maxR+fcx),sy2=Math.round(Math.sin(theta)*rr*maxR+fcy);if(sx2>=0&&sx2<rw&&sy2>=0&&sy2<rh){const si=(sy2*rw+sx2)*4,di=(py*rw+px2)*4;dst.data[di]=src.data[si];dst.data[di+1]=src.data[si+1];dst.data[di+2]=src.data[si+2];dst.data[di+3]=src.data[si+3];}}}}pixelCache.imageData=dst;pixelCache.frame=time;pixelCache.filterId=f;ctx.save();ctx.globalAlpha=int;ctx.putImageData(dst,rx,ry2);ctx.restore();}
+      else if(pixelCache.imageData){ctx.save();ctx.globalAlpha=int;ctx.putImageData(pixelCache.imageData,rx,ry2);ctx.restore();}
+    }
   }
 }
 
-// ─── Snap / Save ──────────────────────────────────────────────────────────────
+// ─── Snap / Save ─────────────────────────────────────────────────────────────
 shutter.onclick = () => {
   flashEl.style.opacity='1'; setTimeout(()=>flashEl.style.opacity='0',120);
-  savedDataUrl = canvas.toDataURL('image/jpeg', 0.95);
-  snapImg.src = savedDataUrl;
-  modal.classList.add('show');
+  frozen = true;
+  const offscreen = document.createElement('canvas');
+  offscreen.width = canvas.width; offscreen.height = canvas.height;
+  const octx = offscreen.getContext('2d');
+  octx.save(); octx.scale(-1,1); octx.drawImage(canvas,-canvas.width,0); octx.restore();
+  offscreen.toBlob(blob => {
+    if (!blob) { frozen = false; return; }
+    savedBlob = blob;
+    if (savedDataUrl) URL.revokeObjectURL(savedDataUrl);
+    savedDataUrl = URL.createObjectURL(blob);
+    snapImg.src = savedDataUrl;
+    modal.classList.add('show');
+    setTimeout(() => { frozen = false; }, 300);
+  }, 'image/jpeg', 0.95);
 };
 
 openBtn.onclick = () => {
-  // Open image in new tab — on iPhone: long press → Add to Photos
-  const w2 = window.open('', '_blank');
-  if (!w2) { alert('Please allow popups for this site to open the photo.'); return; }
-  w2.document.write(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width"><title>SnapFX Photo</title><style>body{margin:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;font-family:sans-serif;color:#fff;padding:20px}img{max-width:100%;max-height:80vh;border-radius:12px}p{font-size:13px;color:#888;text-align:center;line-height:1.7;max-width:300px}</style></head><body><img src="${savedDataUrl}"><p>📱 <b style="color:#fff">iPhone:</b> Long-press the photo above → "Add to Photos"<br>🤖 <b style="color:#fff">Android:</b> Long-press → "Download image"<br>💻 <b style="color:#fff">Desktop:</b> Right-click → "Save image as"</p></body></html>`);
-
-w2.document.close();
+  if (!savedBlob) return;
+  const blobUrl = URL.createObjectURL(savedBlob);
+  const w2 = window.open(blobUrl, '_blank');
+  if (!w2) { alert('Please allow popups for this site to open the photo.'); URL.revokeObjectURL(blobUrl); return; }
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
 };
 
 dlBtn.onclick = () => {
-const a = document.createElement(‘a’);
-a.href = savedDataUrl;
-a.download = `snapfx_${Date.now()}.jpg`;
-a.click();
+  if (!savedBlob) return;
+  const url = URL.createObjectURL(savedBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `snapfx_${Date.now()}.jpg`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
 };
 
-closeModal.onclick = () => { modal.classList.remove(‘show’); savedDataUrl=’’; snapImg.src=’’; };
+closeModal.onclick = () => {
+  modal.classList.remove('show');
+  if (savedDataUrl) URL.revokeObjectURL(savedDataUrl);
+  savedBlob = null; savedDataUrl = ''; snapImg.src = '';
+};
 </script>
 
 </body>
