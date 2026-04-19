@@ -672,10 +672,23 @@ function drawFilter(W, H, fd) {
 shutter.onclick = () => {
   flashEl.style.opacity='1'; setTimeout(()=>flashEl.style.opacity='0',120);
   frozen = true;
+  const W = canvas.width, H = canvas.height;
   const offscreen = document.createElement('canvas');
-  offscreen.width = canvas.width; offscreen.height = canvas.height;
+  offscreen.width = W; offscreen.height = H;
   const octx = offscreen.getContext('2d');
-  octx.save(); octx.scale(-1,1); octx.drawImage(canvas,-canvas.width,0); octx.restore();
+  octx.save(); octx.scale(-1,1); octx.drawImage(video,-W,0,W,H); octx.restore();
+  if (activeFilter !== 'none') {
+    const staleness = lastFaceTime === 0 ? 1 : Math.min(1, (Date.now() - lastFaceTime) / 1500);
+    const trackingAlpha = 1 - staleness;
+    if (trackingAlpha > 0) {
+      const liveCtx = ctx;
+      ctx = octx;
+      octx.save(); octx.globalAlpha = trackingAlpha;
+      drawFilter(W, H, faceData);
+      octx.restore();
+      ctx = liveCtx;
+    }
+  }
   offscreen.toBlob(blob => {
     if (!blob) { frozen = false; return; }
     savedBlob = blob;
