@@ -162,7 +162,9 @@ let activeFilter = 'none';
 let intensity    = 0.85;
 let time         = 0;
 let animId       = null;
+let savedBlob    = null;
 let savedDataUrl = '';
+let frozen       = false;
 let lastFaceTime = 0;
 const pixelCache = { imageData: null, frame: -1, filterId: '' };
 
@@ -344,7 +346,7 @@ function startLoop() {
   function loop() {
     time = (time + 1) % 1000000;
     const W = canvas.width, H = canvas.height;
-    if (video.readyState >= 2) {
+    if (video.readyState >= 2 && !frozen) {
       ctx.save(); ctx.scale(-1,1); ctx.drawImage(video,-W,0,W,H); ctx.restore();
       if (activeFilter !== 'none') {
         const staleness = lastFaceTime === 0 ? 1 : Math.min(1, (Date.now() - lastFaceTime) / 1500);
@@ -666,31 +668,50 @@ function drawFilter(W, H, fd) {
   }
 }
 
-// ─── Snap / Save ──────────────────────────────────────────────────────────────
+// ─── Snap / Save ─────────────────────────────────────────────────────────────
 shutter.onclick = () => {
   flashEl.style.opacity='1'; setTimeout(()=>flashEl.style.opacity='0',120);
-  savedDataUrl = canvas.toDataURL('image/jpeg', 0.95);
-  snapImg.src = savedDataUrl;
-  modal.classList.add('show');
+  frozen = true;
+  const offscreen = document.createElement('canvas');
+  offscreen.width = canvas.width; offscreen.height = canvas.height;
+  const octx = offscreen.getContext('2d');
+  octx.save(); octx.scale(-1,1); octx.drawImage(canvas,-canvas.width,0); octx.restore();
+  offscreen.toBlob(blob => {
+    if (!blob) { frozen = false; return; }
+    savedBlob = blob;
+    if (savedDataUrl) URL.revokeObjectURL(savedDataUrl);
+    savedDataUrl = URL.createObjectURL(blob);
+    snapImg.src = savedDataUrl;
+    modal.classList.add('show');
+    setTimeout(() => { frozen = false; }, 300);
+  }, 'image/jpeg', 0.95);
 };
 
 openBtn.onclick = () => {
-  // Open image in new tab — on iPhone: long press → Add to Photos
-  const w2 = window.open('', '_blank');
-  if (!w2) { alert('Please allow popups for this site to open the photo.'); return; }
-  w2.document.write(`<!DOCTYPE html><html><head><meta name="viewport" content="width=device-width"><title>SnapFX Photo</title><style>body{margin:0;background:#000;display:flex;flex-direction:column;align-items:center;justify-content:center;min-height:100vh;gap:16px;font-family:sans-serif;color:#fff;padding:20px}img{max-width:100%;max-height:80vh;border-radius:12px}p{font-size:13px;color:#888;text-align:center;line-height:1.7;max-width:300px}</style></head><body><img src="${savedDataUrl}"><p>📱 <b style="color:#fff">iPhone:</b> Long-press the photo above → "Add to Photos"<br>🤖 <b style="color:#fff">Android:</b> Long-press → "Download image"<br>💻 <b style="color:#fff">Desktop:</b> Right-click → "Save image as"</p></body></html>`);
-
-w2.document.close();
+  if (!savedBlob) return;
+  const blobUrl = URL.createObjectURL(savedBlob);
+  const w2 = window.open(blobUrl, '_blank');
+  if (!w2) { alert('Please allow popups for this site to open the photo.'); URL.revokeObjectURL(blobUrl); return; }
+  setTimeout(() => URL.revokeObjectURL(blobUrl), 60000);
 };
 
 dlBtn.onclick = () => {
-const a = document.createElement(‘a’);
-a.href = savedDataUrl;
-a.download = `snapfx_${Date.now()}.jpg`;
-a.click();
+  if (!savedBlob) return;
+  const url = URL.createObjectURL(savedBlob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `snapfx_${Date.now()}.jpg`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
 };
 
-closeModal.onclick = () => { modal.classList.remove(‘show’); savedDataUrl=’’; snapImg.src=’’; };
+closeModal.onclick = () => {
+  modal.classList.remove('show');
+  if (savedDataUrl) URL.revokeObjectURL(savedDataUrl);
+  savedBlob = null; savedDataUrl = ''; snapImg.src = '';
+};
 </script>
 
 </body>
