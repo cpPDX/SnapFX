@@ -163,6 +163,7 @@ let intensity    = 0.85;
 let time         = 0;
 let animId       = null;
 let savedDataUrl = '';
+let lastFaceTime = 0;
 
 const particles = [];
 const glitter   = Array.from({length:120}, () => ({
@@ -324,6 +325,7 @@ function initTracker() {
     tracking.track(video, tracker, {camera:true});
     tracker.on('track', ev => {
       if (!ev.data.length) return;
+      lastFaceTime = Date.now();
       const face = ev.data[0];
       const vw = video.videoWidth, vh = video.videoHeight;
       const raw = {x:1-(face.x+face.width)/vw, y:face.y/vh, w:face.width/vw, h:face.height/vh};
@@ -337,12 +339,22 @@ function initTracker() {
 
 // ─── Render loop ──────────────────────────────────────────────────────────────
 function startLoop() {
+  lastFaceTime = Date.now();
   function loop() {
     time = (time + 1) % 1000000;
     const W = canvas.width, H = canvas.height;
     if (video.readyState >= 2) {
       ctx.save(); ctx.scale(-1,1); ctx.drawImage(video,-W,0,W,H); ctx.restore();
-      if (activeFilter !== 'none') drawFilter(W, H, faceData);
+      if (activeFilter !== 'none') {
+        const staleness = lastFaceTime === 0 ? 1 : Math.min(1, (Date.now() - lastFaceTime) / 1500);
+        const trackingAlpha = 1 - staleness;
+        if (trackingAlpha > 0) {
+          ctx.save();
+          ctx.globalAlpha = trackingAlpha;
+          drawFilter(W, H, faceData);
+          ctx.restore();
+        }
+      }
     }
     animId = requestAnimationFrame(loop);
   }
