@@ -722,6 +722,7 @@ dlBtn.onclick = () => {
 
 closeModal.onclick = () => {
   modal.classList.remove('show');
+  frozen = false;
   if (savedDataUrl) URL.revokeObjectURL(savedDataUrl);
   savedBlob = null; savedDataUrl = ''; snapImg.src = '';
 };
