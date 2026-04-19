@@ -33,6 +33,9 @@ canvas{position:absolute;top:0;left:0;width:100%;height:100%;object-fit:cover}
 #status{position:absolute;top:60px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.62);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.1);padding:5px 14px;border-radius:20px;font-size:11px;color:#aaa;z-index:5;white-space:nowrap;display:none}
 /* Flash */
 #flash{position:absolute;inset:0;background:#fff;opacity:0;pointer-events:none;z-index:20;transition:opacity .06s}
+/* Tracking lost overlay */
+#trackingMsg{position:absolute;bottom:18%;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.62);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);border:1px solid rgba(255,255,255,.15);padding:8px 18px;border-radius:20px;font-size:12px;color:#fff;z-index:6;white-space:nowrap;pointer-events:none;opacity:0;transition:opacity .4s;text-align:center}
+#trackingMsg.visible{opacity:1}
 /* Bottom UI */
 #bottom{background:#111118;flex-shrink:0}
 /* Category tabs */
@@ -98,6 +101,7 @@ input[type=range]{width:100%;accent-color:#fffc00;cursor:pointer;height:4px}
 </div>
 <div id="status"></div>
 <div id="flash"></div>
+<div id="trackingMsg">👤 Hold still to apply filter</div>
 ```
 
   </div>
@@ -155,7 +159,8 @@ const snapImg  = document.getElementById('snapImg');
 const openBtn  = document.getElementById('openBtn');
 const dlBtn    = document.getElementById('dlBtn');
 const closeModal = document.getElementById('closeModal');
-const activePill = document.getElementById('activePill');
+const activePill    = document.getElementById('activePill');
+const trackingMsg   = document.getElementById('trackingMsg');
 const curFilter  = document.getElementById('curFilter');
 
 let activeFilter = 'none';
@@ -357,6 +362,13 @@ function startLoop() {
           drawFilter(W, H, faceData);
           ctx.restore();
         }
+        if (staleness > 0.5) {
+          trackingMsg.classList.add('visible');
+        } else {
+          trackingMsg.classList.remove('visible');
+        }
+      } else {
+        trackingMsg.classList.remove('visible');
       }
     }
     animId = requestAnimationFrame(loop);
