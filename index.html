@@ -140,7 +140,7 @@ input[type=range]{width:100%;accent-color:#fffc00;cursor:pointer;height:4px}
 // ─── State ────────────────────────────────────────────────────────────────────
 const video    = document.getElementById('video');
 const canvas   = document.getElementById('canvas');
-const ctx      = canvas.getContext('2d');
+let ctx        = canvas.getContext('2d');
 const startDiv = document.getElementById('start');
 const startBtn = document.getElementById('startBtn');
 const errMsg   = document.getElementById('errMsg');
