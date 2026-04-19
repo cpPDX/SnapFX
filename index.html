@@ -171,6 +171,7 @@ let savedBlob    = null;
 let savedDataUrl = '';
 let frozen       = false;
 let lastFaceTime = 0;
+let trackingEverWorked = false;
 const pixelCache = { imageData: null, frame: -1, filterId: '' };
 
 const particles = [];
@@ -334,6 +335,7 @@ function initTracker() {
     tracker.on('track', ev => {
       if (!ev.data.length) return;
       lastFaceTime = Date.now();
+     trackingEverWorked = true;
       const face = ev.data[0];
       const vw = video.videoWidth, vh = video.videoHeight;
       const raw = {x:1-(face.x+face.width)/vw, y:face.y/vh, w:face.width/vw, h:face.height/vh};
@@ -354,7 +356,7 @@ function startLoop() {
     if (video.readyState >= 2 && !frozen) {
       ctx.save(); ctx.scale(-1,1); ctx.drawImage(video,-W,0,W,H); ctx.restore();
       if (activeFilter !== 'none') {
-        const staleness = lastFaceTime === 0 ? 1 : Math.min(1, (Date.now() - lastFaceTime) / 1500);
+        const staleness = !trackingEverWorked ? 0 : Math.min(1, (Date.now() - lastFaceTime) / 1500);
         const trackingAlpha = 1 - staleness;
         if (trackingAlpha > 0) {
           ctx.save();
@@ -690,7 +692,7 @@ shutter.onclick = () => {
   const octx = offscreen.getContext('2d');
   octx.save(); octx.scale(-1,1); octx.drawImage(video,-W,0,W,H); octx.restore();
   if (activeFilter !== 'none') {
-    const staleness = lastFaceTime === 0 ? 1 : Math.min(1, (Date.now() - lastFaceTime) / 1500);
+    const staleness = !trackingEverWorked ? 0 : Math.min(1, (Date.now() - lastFaceTime) / 1500);
     const trackingAlpha = 1 - staleness;
     if (trackingAlpha > 0) {
       const liveCtx = ctx;
