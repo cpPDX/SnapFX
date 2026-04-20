@@ -329,43 +329,120 @@ async function initCamera() {
 }
 
 // ─── Face tracker ─────────────────────────────────────────────────────────────
-function loadTracker() {
-  const inj = (src, ok, fail) => { const s = document.createElement('script'); s.src=src; s.onload=ok; s.onerror=fail; document.head.appendChild(s); };
-  inj('https://cdn.jsdelivr.net/npm/tracking@1.1.3/build/tracking-min.js',
-    () => inj('https://cdn.jsdelivr.net/npm/tracking@1.1.3/build/data/face-min.js', initTracker, () => showStatus('📍 Demo mode — center your face in frame', 0)),
-    () => showStatus('📍 Demo mode — center your face in frame', 0));
+async function loadTracker() {
+  try {
+    showStatus('Loading face tracker\u2026');
+    let attempts = 0;
+    while (typeof FaceLandmarker === 'undefined' && attempts < 40) {
+      await new Promise(r => setTimeout(r, 250));
+      attempts++;
+      if (typeof vision !== 'undefined' && vision.FaceLandmarker) {
+        window.FaceLandmarker = vision.FaceLandmarker;
+        window.FilesetResolver = vision.FilesetResolver;
+      }
+    }
+    if (typeof FaceLandmarker === 'undefined') throw new Error('MediaPipe failed to load');
+    await initTracker();
+  } catch(e) {
+    console.error('Tracker load error:', e);
+    showStatus('\ud83d\udccd Demo mode \u2014 center your face in frame', 0);
+  }
 }
 
-function initTracker() {
-  try {
-    const tracker = new tracking.ObjectTracker('face');
-    tracker.setInitialScale(2);
-    tracker.setStepSize(1.5);
-    tracker.setEdgesDensity(.1);
-    tracking.track(video, tracker);
-    let trackingConfirmed = false;
-    tracker.on('track', ev => {
-      if (!ev.data.length) return;
-      if (!trackingConfirmed) {
-        trackingConfirmed = true;
-        showStatus('✓ Face tracking active', 2500);
-      }
-      lastFaceTime = Date.now();
-      trackingEverWorked = true;
-      const face = ev.data[0];
-      const vw = video.videoWidth, vh = video.videoHeight;
-      const raw = {x:1-(face.x+face.width)/vw, y:face.y/vh, w:face.width/vw, h:face.height/vh};
-      faceHist.push(raw); if (faceHist.length > 6) faceHist.shift();
-      const avg = k => faceHist.reduce((a,b)=>a+b[k],0)/faceHist.length;
-      faceData = {x:avg('x'),y:avg('y'),w:avg('w'),h:avg('h')};
-    });
-    setTimeout(() => {
-      if (!trackingConfirmed) showStatus('📍 Demo mode — center your face in frame', 0);
-    }, 8000);
-  } catch(e) {
-    showStatus('📍 Demo mode — center your face in frame', 0);
-  }
+async function initTracker() {
+  try {
+    const filesetResolver = await FilesetResolver.forVisionTasks(
+      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.9/wasm'
+    );
+    const faceLandmarker = await FaceLandmarker.createFromOptions(filesetResolver, {
+      baseOptions: {
+        modelAssetPath: 'https://storage.googleapis.com/mediapipe-models/face_landmarker/face_landmarker/float16/1/face_landmarker.task',
+        delegate: 'GPU'
+      },
+      outputFaceBlendshapes: false,
+      outputFacialTransformationMatrixes: false,
+      runningMode: 'VIDEO',
+      numFaces: 1
+    });
+
+    showStatus('\u2713 Face tracking active', 2500);
+
+    let lastVideoTime = -1;
+    function detect() {
+      if (video.readyState >= 2 && video.currentTime !== lastVideoTime) {
+        lastVideoTime = video.currentTime;
+        const results = faceLandmarker.detectForVideo(video, performance.now());
+        if (results.faceLandmarks && results.faceLandmarks.length > 0) {
+          processFaceLandmarks(results.faceLandmarks[0]);
+        }
+      }
+      requestAnimationFrame(detect);
+    }
+    requestAnimationFrame(detect);
+
+  } catch(e) {
+    console.error('MediaPipe init error:', e);
+    showStatus('\ud83d\udccd Demo mode \u2014 center your face in frame', 0);
+  }
 }
+
+function processFaceLandmarks(landmarks) {
+  const vw = canvas.width, vh = canvas.height;
+
+  const smoothLm = (idx) => {
+    const xs = landmarkHist.map(lms => (1 - lms[idx].x) * vw);
+    const ys = landmarkHist.map(lms => lms[idx].y * vh);
+    return {
+      x: xs.reduce((a,b) => a+b, 0) / xs.length,
+      y: ys.reduce((a,b) => a+b, 0) / ys.length
+    };
+  };
+
+  const allX = landmarks.map(l => (1 - l.x) * vw);
+  const allY = landmarks.map(l => l.y * vh);
+  const minX = Math.min(...allX), maxX = Math.max(...allX);
+  const minY = Math.min(...allY), maxY = Math.max(...allY);
+  const raw = { x:minX/vw, y:minY/vh, w:(maxX-minX)/vw, h:(maxY-minY)/vh };
+
+  faceHist.push(raw);
+  if (faceHist.length > 6) faceHist.shift();
+  const avg = k => faceHist.reduce((a,b) => a+b[k], 0) / faceHist.length;
+
+  landmarkHist.push(landmarks);
+  if (landmarkHist.length > 3) landmarkHist.shift();
+
+  faceData = {
+    x:avg('x'), y:avg('y'), w:avg('w'), h:avg('h'),
+    landmarks: {
+      noseTip:       smoothLm(4),
+      forehead:      smoothLm(10),
+      chin:          smoothLm(152),
+      leftEye:       smoothLm(468),
+      rightEye:      smoothLm(473),
+      leftEyeOuter:  smoothLm(33),
+      rightEyeOuter: smoothLm(263),
+      leftEyeInner:  smoothLm(133),
+      rightEyeInner: smoothLm(362),
+      leftTemple:    smoothLm(234),
+      rightTemple:   smoothLm(454),
+      leftCheek:     smoothLm(116),
+      rightCheek:    smoothLm(345),
+      leftMouth:     smoothLm(61),
+      rightMouth:    smoothLm(291),
+      upperLip:      smoothLm(13),
+      leftJaw:       smoothLm(132),
+      rightJaw:      smoothLm(361),
+      leftBrow:      smoothLm(70),
+      rightBrow:     smoothLm(300),
+      foreheadLeft:  smoothLm(54),
+      foreheadRight: smoothLm(284),
+    }
+  };
+
+  lastFaceTime = Date.now();
+  trackingEverWorked = true;
+}
+
 
 // ─── Render loop ──────────────────────────────────────────────────────────────
 function startLoop() {
