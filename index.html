@@ -67,16 +67,16 @@ input[type=range]{width:100%;accent-color:#fffc00;cursor:pointer;height:4px}
 .cright{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:1}
 #curFilter{font-size:11px;color:#fffc00;text-align:right}
 /* Save modal */
-#modal{position:fixed;inset:0;background:rgba(0,0,0,.94);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:50;gap:16px;padding:20px}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.94);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:50;gap:12px;padding:20px;overflow-y:auto}
 #modal.show{display:flex}
-#snapImg{max-width:100%;max-height:52vh;border-radius:16px;object-fit:contain;box-shadow:0 8px 40px rgba(0,0,0,.8)}
+#snapImg{max-width:100%;max-height:40vh;border-radius:16px;object-fit:contain;box-shadow:0 8px 40px rgba(0,0,0,.8)}
 .modalTitle{font-size:18px;font-weight:700}
 .modalHint{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 18px;font-size:12px;color:#888;text-align:center;line-height:1.8;max-width:310px}
 .modalHint strong{color:#fff}
 .modalBtns{display:flex;gap:10px;width:100%;max-width:320px}
 .btnPrimary{flex:1;background:linear-gradient(135deg,#fffc00,#ff6b35);color:#000;border:none;border-radius:50px;padding:14px 0;font-weight:800;font-size:14px;cursor:pointer}
 .btnSecondary{flex:1;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.18);border-radius:50px;padding:14px 0;font-weight:600;font-size:14px;cursor:pointer}
-.btnClose{background:none;border:none;color:rgba(255,255,255,.6);font-size:14px;cursor:pointer;padding:8px 16px}
+.btnClose{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:14px;font-weight:600;cursor:pointer;padding:10px 28px;border-radius:50px;margin-top:4px}
 </style>
 </head>
 <body>
@@ -180,7 +180,7 @@ const glitter   = Array.from({length:120}, () => ({
   hue:Math.random()*360, speed:Math.random()*.02+.005,
   alpha:Math.random(), phase:Math.random()*Math.PI*2
 }));
-let faceData = {x:.17, y:.1, w:.66, h:.8};
+let faceData = {x:.20, y:.15, w:.60, h:.65};
 const faceHist = [];
 
 intSlide.addEventListener('input', () => intensity = intSlide.value/100);
@@ -293,17 +293,18 @@ tryAgain.onclick = () => { errMsg.style.display='none'; tryAgain.style.display='
 async function initCamera() {
   startBtn.textContent = 'Starting…'; startBtn.disabled = true;
   try {
+    const isPortrait = window.innerHeight > window.innerWidth;
+    const camConstraints = isPortrait
+      ? {facingMode:'user', width:{ideal:720}, height:{ideal:1280}}
+      : {facingMode:'user', width:{ideal:1280}, height:{ideal:720}};
     const stream = await navigator.mediaDevices.getUserMedia({
-      video: {facingMode:'user', width:{ideal:1280}, height:{ideal:720}}, audio:false
+      video: camConstraints, audio:false
     });
     video.srcObject = stream;
     await new Promise(r => { video.onloadedmetadata = r; });
     await video.play();
     canvas.width  = video.videoWidth  || 1280;
     canvas.height = video.videoHeight || 720;
-    faceData = canvas.width > canvas.height
-      ? {x:.17, y:.1,  w:.66, h:.55}
-      : {x:.15, y:.07, w:.7,  h:.55};
     startDiv.style.display = 'none';
     topbar.style.display = 'flex';
     showStatus('Loading face tracker…');
@@ -326,19 +327,26 @@ async function initCamera() {
 function loadTracker() {
   const inj = (src, ok, fail) => { const s = document.createElement('script'); s.src=src; s.onload=ok; s.onerror=fail; document.head.appendChild(s); };
   inj('https://cdn.jsdelivr.net/npm/tracking@1.1.3/build/tracking-min.js',
-    () => inj('https://cdn.jsdelivr.net/npm/tracking@1.1.3/build/data/face-min.js', initTracker, () => showStatus('Demo mode — center your face',3000)),
-    () => showStatus('Demo mode — center your face',3000));
+    () => inj('https://cdn.jsdelivr.net/npm/tracking@1.1.3/build/data/face-min.js', initTracker, () => showStatus('📍 Demo mode — center your face in frame', 0)),
+    () => showStatus('📍 Demo mode — center your face in frame', 0));
 }
 
 function initTracker() {
   try {
     const tracker = new tracking.ObjectTracker('face');
-    tracker.setInitialScale(4); tracker.setStepSize(2); tracker.setEdgesDensity(.1);
-    tracking.track(video, tracker, {camera:true});
+    tracker.setInitialScale(2);
+    tracker.setStepSize(1.5);
+    tracker.setEdgesDensity(.1);
+    tracking.track(video, tracker);
+    let trackingConfirmed = false;
     tracker.on('track', ev => {
       if (!ev.data.length) return;
+      if (!trackingConfirmed) {
+        trackingConfirmed = true;
+        showStatus('✓ Face tracking active', 2500);
+      }
       lastFaceTime = Date.now();
-     trackingEverWorked = true;
+      trackingEverWorked = true;
       const face = ev.data[0];
       const vw = video.videoWidth, vh = video.videoHeight;
       const raw = {x:1-(face.x+face.width)/vw, y:face.y/vh, w:face.width/vw, h:face.height/vh};
@@ -346,8 +354,12 @@ function initTracker() {
       const avg = k => faceHist.reduce((a,b)=>a+b[k],0)/faceHist.length;
       faceData = {x:avg('x'),y:avg('y'),w:avg('w'),h:avg('h')};
     });
-    showStatus('✓ Face tracking active', 2500);
-  } catch(e) { showStatus('Demo mode — center your face', 3000); }
+    setTimeout(() => {
+      if (!trackingConfirmed) showStatus('📍 Demo mode — center your face in frame', 0);
+    }, 8000);
+  } catch(e) {
+    showStatus('📍 Demo mode — center your face in frame', 0);
+  }
 }
 
 // ─── Render loop ──────────────────────────────────────────────────────────────
