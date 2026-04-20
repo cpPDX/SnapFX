@@ -478,7 +478,15 @@ function startLoop() {
 // ─── Filter geometry helper ───────────────────────────────────────────────────
 function B(W,H,fd) {
   const x=fd.x*W, y=fd.y*H, w=fd.w*W, h=fd.h*H;
-  return {x,y,w,h,cx:x+w/2,cy:y+h/2,top:y,bot:y+h,s:w};
+  const lm = fd.landmarks;
+  const base = {x,y,w,h,cx:x+w/2,cy:y+h/2,top:y,bot:y+h,s:w,lm};
+  if (lm) {
+    base.cx     = (lm.leftEye.x + lm.rightEye.x) / 2;
+    base.eyeY   = (lm.leftEye.y + lm.rightEye.y) / 2;
+    base.eyeDist = Math.abs(lm.rightEye.x - lm.leftEye.x);
+    base.s      = base.eyeDist * 2.8;
+  }
+  return base;
 }
 
 // ─── All filter drawing ───────────────────────────────────────────────────────
