@@ -498,57 +498,72 @@ function drawFilter(W, H, fd) {
   // ── ANIMAL FILTERS ──
   if (f==='dog') {
     ctx.save();ctx.globalAlpha=int;
+    const lEarX=hasLM?lm.leftTemple.x:x+s*.05,rEarX=hasLM?lm.rightTemple.x:x+w-s*.05,earY=hasLM?lm.leftTemple.y-s*.1:top-s*.03;
+    const snX=hasLM?lm.noseTip.x:cx,snY=hasLM?lm.noseTip.y:cy+h*.35;
+    const lCkX=hasLM?lm.leftCheek.x:cx-s*.2,lCkY=hasLM?lm.leftCheek.y:cy+h*.1;
+    const rCkX=hasLM?lm.rightCheek.x:cx+s*.2,rCkY=hasLM?lm.rightCheek.y:cy+h*.1;
     const ear=(ex,ey,flip)=>{ctx.save();ctx.translate(ex,ey);if(flip)ctx.scale(-1,1);ctx.beginPath();ctx.ellipse(0,s*.07,s*.21,s*.34,-.25,0,Math.PI*2);ctx.fillStyle='#7B3F00';ctx.fill();ctx.beginPath();ctx.ellipse(s*.02,s*.09,s*.13,s*.24,-.25,0,Math.PI*2);ctx.fillStyle='#c07a45';ctx.fill();ctx.restore();};
-    ear(x+s*.05,top-s*.03,false);ear(x+w-s*.05,top-s*.03,true);
-    ctx.beginPath();ctx.ellipse(cx,cy+h*.35,s*.23,s*.15,0,0,Math.PI*2);ctx.fillStyle='#c8813a';ctx.fill();
-    ctx.beginPath();ctx.ellipse(cx,cy+h*.3,s*.09,s*.065,0,0,Math.PI*2);ctx.fillStyle='#111';ctx.fill();
-    ctx.beginPath();ctx.ellipse(cx,cy+h*.5,s*.08,s*.12,0,0,Math.PI*2);ctx.fillStyle='#ff6b8a';ctx.fill();
-    [[cx-s*.2,cy+h*.1],[cx+s*.2,cy+h*.1]].forEach(([sx,sy])=>{ctx.beginPath();ctx.ellipse(sx,sy,s*.07,s*.05,.3,0,Math.PI*2);ctx.fillStyle='rgba(80,40,10,.28)';ctx.fill();});
+    ear(lEarX,earY,false);ear(rEarX,earY,true);
+    ctx.beginPath();ctx.ellipse(snX,snY,s*.23,s*.15,0,0,Math.PI*2);ctx.fillStyle='#c8813a';ctx.fill();
+    ctx.beginPath();ctx.ellipse(snX,snY-s*.05,s*.09,s*.065,0,0,Math.PI*2);ctx.fillStyle='#111';ctx.fill();
+    ctx.beginPath();ctx.ellipse(snX,snY+s*.15,s*.08,s*.12,0,0,Math.PI*2);ctx.fillStyle='#ff6b8a';ctx.fill();
+    [[lCkX,lCkY],[rCkX,rCkY]].forEach(([sx,sy])=>{ctx.beginPath();ctx.ellipse(sx,sy,s*.07,s*.05,.3,0,Math.PI*2);ctx.fillStyle='rgba(80,40,10,.28)';ctx.fill();});
     const wh=(sx,sy,a)=>{ctx.beginPath();ctx.moveTo(sx,sy);ctx.lineTo(sx+Math.cos(a)*s*.3,sy+Math.sin(a)*s*.03);ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=1.5;ctx.stroke();};
-    [-.2,-.05,.12].forEach((a,i)=>wh(cx-s*.08,cy+h*.35+i*s*.04,-.05+a));
-    [-.2,-.05,.12].forEach((a,i)=>wh(cx+s*.08,cy+h*.35+i*s*.04,Math.PI+.05-a));
+    [-.2,-.05,.12].forEach((a,i)=>wh(snX-s*.08,snY+i*s*.04,-.05+a));
+    [-.2,-.05,.12].forEach((a,i)=>wh(snX+s*.08,snY+i*s*.04,Math.PI+.05-a));
     ctx.restore();
   }
 
   if (f==='cat') {
     ctx.save();ctx.globalAlpha=int;
+    const lEarX=hasLM?lm.leftTemple.x:cx-s*.3,rEarX=hasLM?lm.rightTemple.x:cx+s*.3,earY=hasLM?lm.leftTemple.y:top+s*.04;
+    const nsX=hasLM?lm.noseTip.x:cx,nsY=hasLM?lm.noseTip.y:cy+h*.36;
     const ear=(ex,ey,flip)=>{ctx.save();ctx.translate(ex,ey);if(flip)ctx.scale(-1,1);ctx.beginPath();ctx.moveTo(0,0);ctx.lineTo(-s*.13,-s*.32);ctx.lineTo(s*.14,-s*.04);ctx.closePath();ctx.fillStyle='#aaa';ctx.fill();ctx.beginPath();ctx.moveTo(s*.02,-s*.04);ctx.lineTo(-s*.08,-s*.25);ctx.lineTo(s*.08,-s*.06);ctx.closePath();ctx.fillStyle='#ffb6c1';ctx.fill();ctx.restore();};
-    ear(cx-s*.3,top+s*.04,false);ear(cx+s*.3,top+s*.04,true);
-    ctx.beginPath();ctx.ellipse(cx,cy+h*.36,s*.1,s*.07,0,0,Math.PI*2);ctx.fillStyle='#ffaabb';ctx.fill();
-    for(let i=-1;i<=1;i++){const wy=cy+h*.36+i*s*.04;ctx.beginPath();ctx.moveTo(cx-s*.05,wy);ctx.lineTo(cx-s*.42,wy+i*s*.01);ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=1.5;ctx.stroke();ctx.beginPath();ctx.moveTo(cx+s*.05,wy);ctx.lineTo(cx+s*.42,wy+i*s*.01);ctx.stroke();}
+    ear(lEarX,earY,false);ear(rEarX,earY,true);
+    ctx.beginPath();ctx.ellipse(nsX,nsY,s*.1,s*.07,0,0,Math.PI*2);ctx.fillStyle='#ffaabb';ctx.fill();
+    for(let i=-1;i<=1;i++){const wy=nsY+i*s*.04;ctx.beginPath();ctx.moveTo(nsX-s*.05,wy);ctx.lineTo(nsX-s*.42,wy+i*s*.01);ctx.strokeStyle='rgba(255,255,255,.9)';ctx.lineWidth=1.5;ctx.stroke();ctx.beginPath();ctx.moveTo(nsX+s*.05,wy);ctx.lineTo(nsX+s*.42,wy+i*s*.01);ctx.stroke();}
     ctx.restore();
   }
 
   if (f==='bunny') {
     ctx.save();ctx.globalAlpha=int;
+    const lEarX=hasLM?lm.leftTemple.x:cx-s*.25,rEarX=hasLM?lm.rightTemple.x:cx+s*.25,earY=hasLM?lm.leftTemple.y:top+s*.02;
+    const nsX=hasLM?lm.noseTip.x:cx,nsY=hasLM?lm.noseTip.y:cy+h*.36;
     const ear=(ex,ey,flip)=>{ctx.save();ctx.translate(ex,ey);if(flip)ctx.scale(-1,1);ctx.beginPath();ctx.ellipse(0,-s*.42,s*.09,s*.44,.12,0,Math.PI*2);ctx.fillStyle='#ffe0f0';ctx.fill();ctx.beginPath();ctx.ellipse(s*.01,-s*.42,s*.05,s*.31,.12,0,Math.PI*2);ctx.fillStyle='#ffb6d9';ctx.fill();ctx.restore();};
-    ear(cx-s*.25,top+s*.02,false);ear(cx+s*.25,top+s*.02,true);
-    ctx.beginPath();ctx.ellipse(cx,cy+h*.36,s*.08,s*.06,0,0,Math.PI*2);ctx.fillStyle='#ff9999';ctx.fill();
+    ear(lEarX,earY,false);ear(rEarX,earY,true);
+    ctx.beginPath();ctx.ellipse(nsX,nsY,s*.08,s*.06,0,0,Math.PI*2);ctx.fillStyle='#ff9999';ctx.fill();
     ctx.restore();
   }
 
   if (f==='bear') {
     ctx.save();ctx.globalAlpha=int;
-    [[cx-s*.38,top-s*.02],[cx+s*.38,top-s*.02]].forEach(([ex,ey])=>{ctx.beginPath();ctx.arc(ex,ey,s*.15,0,Math.PI*2);ctx.fillStyle='#5a3010';ctx.fill();ctx.beginPath();ctx.arc(ex,ey,s*.08,0,Math.PI*2);ctx.fillStyle='#ff9999';ctx.fill();});
-    ctx.beginPath();ctx.ellipse(cx,cy+h*.36,s*.2,s*.14,0,0,Math.PI*2);ctx.fillStyle='#8b5e3c';ctx.fill();
-    ctx.beginPath();ctx.ellipse(cx,cy+h*.34,s*.08,s*.06,0,0,Math.PI*2);ctx.fillStyle='#111';ctx.fill();
+    const lEarX=hasLM?lm.leftTemple.x:cx-s*.38,rEarX=hasLM?lm.rightTemple.x:cx+s*.38,earY=hasLM?lm.leftTemple.y-s*.05:top-s*.02;
+    const snX=hasLM?lm.noseTip.x:cx,snY=hasLM?lm.noseTip.y:cy+h*.36;
+    [[lEarX,earY],[rEarX,earY]].forEach(([ex,ey])=>{ctx.beginPath();ctx.arc(ex,ey,s*.15,0,Math.PI*2);ctx.fillStyle='#5a3010';ctx.fill();ctx.beginPath();ctx.arc(ex,ey,s*.08,0,Math.PI*2);ctx.fillStyle='#ff9999';ctx.fill();});
+    ctx.beginPath();ctx.ellipse(snX,snY,s*.2,s*.14,0,0,Math.PI*2);ctx.fillStyle='#8b5e3c';ctx.fill();
+    ctx.beginPath();ctx.ellipse(snX,snY-s*.04,s*.08,s*.06,0,0,Math.PI*2);ctx.fillStyle='#111';ctx.fill();
     ctx.restore();
   }
 
   if (f==='deer') {
     ctx.save();ctx.globalAlpha=int;
+    const lAntX=hasLM?lm.foreheadLeft.x:cx-s*.2,rAntX=hasLM?lm.foreheadRight.x:cx+s*.2,antY=hasLM?lm.foreheadLeft.y:top+s*.02;
     const antler=(ax,ay,flip)=>{ctx.save();ctx.translate(ax,ay);if(flip)ctx.scale(-1,1);ctx.strokeStyle='#6b3a1f';ctx.lineWidth=s*.032;ctx.lineCap='round';[[0,0,-s*.05,-s*.38],[-s*.05,-s*.38,-s*.2,-s*.52],[-s*.05,-s*.38,s*.06,-s*.5],[-s*.05,-s*.2,s*.09,-s*.32]].forEach(([x1,y1,x2,y2])=>{ctx.beginPath();ctx.moveTo(x1,y1);ctx.lineTo(x2,y2);ctx.stroke();});ctx.restore();};
-    antler(cx-s*.2,top+s*.02,false);antler(cx+s*.2,top+s*.02,true);
+    antler(lAntX,antY,false);antler(rAntX,antY,true);
+    const lDEarX=hasLM?lm.leftTemple.x:x-s*.05,rDEarX=hasLM?lm.rightTemple.x:x+w+s*.05,dEarY=hasLM?lm.leftTemple.y:top+s*.2;
     const dEar=(ex,ey,flip)=>{ctx.save();ctx.translate(ex,ey);if(flip)ctx.scale(-1,1);ctx.beginPath();ctx.ellipse(0,0,s*.12,s*.18,-.4,0,Math.PI*2);ctx.fillStyle='#c8a46e';ctx.fill();ctx.beginPath();ctx.ellipse(0,0,s*.07,s*.11,-.4,0,Math.PI*2);ctx.fillStyle='#f5cfa0';ctx.fill();ctx.restore();};
-    dEar(x-s*.05,top+s*.2,false);dEar(x+w+s*.05,top+s*.2,true);
-    ctx.beginPath();ctx.ellipse(cx,cy+h*.38,s*.08,s*.06,0,0,Math.PI*2);ctx.fillStyle='#333';ctx.fill();
+    dEar(lDEarX,dEarY,false);dEar(rDEarX,dEarY,true);
+    const nsX=hasLM?lm.noseTip.x:cx,nsY=hasLM?lm.noseTip.y:cy+h*.38;
+    ctx.beginPath();ctx.ellipse(nsX,nsY,s*.08,s*.06,0,0,Math.PI*2);ctx.fillStyle='#333';ctx.fill();
     ctx.restore();
   }
 
   if (f==='frog') {
     ctx.save();ctx.globalAlpha=int;
-    [[cx-s*.22,top-s*.12],[cx+s*.22,top-s*.12]].forEach(([ex,ey])=>{ctx.beginPath();ctx.arc(ex,ey,s*.15,0,Math.PI*2);ctx.fillStyle='#5db85d';ctx.fill();ctx.beginPath();ctx.arc(ex,ey,s*.12,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.beginPath();ctx.arc(ex,ey+s*.02,s*.07,0,Math.PI*2);ctx.fillStyle='#111';ctx.fill();ctx.beginPath();ctx.arc(ex-s*.03,ey-s*.02,s*.025,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();});
-    ctx.beginPath();ctx.arc(cx,cy+h*.28,s*.25,0,Math.PI);ctx.strokeStyle='#2d7a2d';ctx.lineWidth=s*.04;ctx.stroke();
+    const lEyeX=hasLM?lm.leftEyeOuter.x:cx-s*.22,rEyeX=hasLM?lm.rightEyeOuter.x:cx+s*.22,fEyeY=hasLM?lm.leftEye.y-s*.25:top-s*.12;
+    const mX=hasLM?lm.noseTip.x:cx,mY=hasLM?lm.upperLip.y+s*.05:cy+h*.28,mR=hasLM?Math.abs(lm.leftMouth.x-lm.rightMouth.x)*.6:s*.25;
+    [[lEyeX,fEyeY],[rEyeX,fEyeY]].forEach(([ex,ey])=>{ctx.beginPath();ctx.arc(ex,ey,s*.15,0,Math.PI*2);ctx.fillStyle='#5db85d';ctx.fill();ctx.beginPath();ctx.arc(ex,ey,s*.12,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();ctx.beginPath();ctx.arc(ex,ey+s*.02,s*.07,0,Math.PI*2);ctx.fillStyle='#111';ctx.fill();ctx.beginPath();ctx.arc(ex-s*.03,ey-s*.02,s*.025,0,Math.PI*2);ctx.fillStyle='#fff';ctx.fill();});
+    ctx.beginPath();ctx.arc(mX,mY,mR,0,Math.PI);ctx.strokeStyle='#2d7a2d';ctx.lineWidth=s*.04;ctx.stroke();
     ctx.restore();
   }
 
