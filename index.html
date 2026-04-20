@@ -67,16 +67,16 @@ input[type=range]{width:100%;accent-color:#fffc00;cursor:pointer;height:4px}
 .cright{display:flex;flex-direction:column;align-items:flex-end;gap:5px;flex:1}
 #curFilter{font-size:11px;color:#fffc00;text-align:right}
 /* Save modal */
-#modal{position:fixed;inset:0;background:rgba(0,0,0,.94);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:50;gap:16px;padding:20px}
+#modal{position:fixed;inset:0;background:rgba(0,0,0,.94);display:none;flex-direction:column;align-items:center;justify-content:center;z-index:50;gap:12px;padding:20px;overflow-y:auto}
 #modal.show{display:flex}
-#snapImg{max-width:100%;max-height:52vh;border-radius:16px;object-fit:contain;box-shadow:0 8px 40px rgba(0,0,0,.8)}
+#snapImg{max-width:100%;max-height:40vh;border-radius:16px;object-fit:contain;box-shadow:0 8px 40px rgba(0,0,0,.8)}
 .modalTitle{font-size:18px;font-weight:700}
 .modalHint{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:14px;padding:12px 18px;font-size:12px;color:#888;text-align:center;line-height:1.8;max-width:310px}
 .modalHint strong{color:#fff}
 .modalBtns{display:flex;gap:10px;width:100%;max-width:320px}
 .btnPrimary{flex:1;background:linear-gradient(135deg,#fffc00,#ff6b35);color:#000;border:none;border-radius:50px;padding:14px 0;font-weight:800;font-size:14px;cursor:pointer}
 .btnSecondary{flex:1;background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.18);border-radius:50px;padding:14px 0;font-weight:600;font-size:14px;cursor:pointer}
-.btnClose{background:none;border:none;color:rgba(255,255,255,.6);font-size:14px;cursor:pointer;padding:8px 16px}
+.btnClose{background:rgba(255,255,255,.1);border:1px solid rgba(255,255,255,.2);color:#fff;font-size:14px;font-weight:600;cursor:pointer;padding:10px 28px;border-radius:50px;margin-top:4px}
 </style>
 </head>
 <body>
