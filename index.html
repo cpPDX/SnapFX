@@ -732,8 +732,10 @@ function drawFilter(W, H, fd) {
   if (f==='neon') {
     ctx.save();ctx.globalAlpha=int*.9;const hue=(t*2)%360;
     ctx.shadowBlur=24;ctx.shadowColor=`hsl(${hue},100%,60%)`;ctx.strokeStyle=`hsl(${hue},100%,72%)`;ctx.lineWidth=3.5;ctx.beginPath();ctx.ellipse(cx,cy,s*.52,s*.62,0,0,Math.PI*2);ctx.stroke();
-    ctx.shadowColor=`hsl(${(hue+120)%360},100%,60%)`;ctx.strokeStyle=`hsl(${(hue+120)%360},100%,72%)`;ctx.lineWidth=2.5;ctx.beginPath();ctx.ellipse(cx,top-s*.18,s*.28,s*.09,0,0,Math.PI*2);ctx.stroke();
-    ctx.shadowColor=`hsl(${(hue+240)%360},100%,60%)`;ctx.strokeStyle=`hsl(${(hue+240)%360},100%,72%)`;ctx.lineWidth=2;[[cx-s*.22,cy-h*.1,s*.15,s*.09],[cx+s*.22,cy-h*.1,s*.15,s*.09]].forEach(([ex,ey,rx,ry])=>{ctx.beginPath();ctx.ellipse(ex,ey,rx,ry,0,0,Math.PI*2);ctx.stroke();});
+    const nHaloX=hasLM?lm.forehead.x:cx,nHaloY=hasLM?lm.forehead.y-s*.18:top-s*.18;
+    ctx.shadowColor=`hsl(${(hue+120)%360},100%,60%)`;ctx.strokeStyle=`hsl(${(hue+120)%360},100%,72%)`;ctx.lineWidth=2.5;ctx.beginPath();ctx.ellipse(nHaloX,nHaloY,s*.28,s*.09,0,0,Math.PI*2);ctx.stroke();
+    const lNEyeX=hasLM?lm.leftEye.x:cx-s*.22,rNEyeX=hasLM?lm.rightEye.x:cx+s*.22,nEyeY=hasLM?lm.leftEye.y:cy-h*.1;
+    ctx.shadowColor=`hsl(${(hue+240)%360},100%,60%)`;ctx.strokeStyle=`hsl(${(hue+240)%360},100%,72%)`;ctx.lineWidth=2;[[lNEyeX,nEyeY,s*.15,s*.09],[rNEyeX,nEyeY,s*.15,s*.09]].forEach(([ex,ey,rx,ry])=>{ctx.beginPath();ctx.ellipse(ex,ey,rx,ry,0,0,Math.PI*2);ctx.stroke();});
     ctx.restore();
   }
 
