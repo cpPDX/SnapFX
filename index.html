@@ -492,7 +492,8 @@ function B(W,H,fd) {
 // ─── All filter drawing ───────────────────────────────────────────────────────
 function drawFilter(W, H, fd) {
   const f=activeFilter, int=intensity, t=time;
-  const {x,y,w,h,cx,cy,top,bot,s} = B(W,H,fd);
+  const {x,y,w,h,cx,cy,top,bot,s,lm} = B(W,H,fd);
+  const hasLM = !!lm;
 
   // ── ANIMAL FILTERS ──
   if (f==='dog') {
