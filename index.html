@@ -331,26 +331,9 @@ async function initCamera() {
 async function loadTracker() {
   try {
     showStatus('Loading face tracker\u2026');
-    // Inject script dynamically so onerror fires on load failure
-    if (typeof vision === 'undefined' || !vision.FaceLandmarker) {
-      const loadScript = url => new Promise((res, rej) => {
-        const s = document.createElement('script');
-        s.src = url; s.onload = res;
-        s.onerror = () => rej(new Error('Script blocked or unavailable: ' + url.split('/')[2]));
-        document.head.appendChild(s);
-      });
-      try {
-        await loadScript('https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.9/vision_bundle.js');
-      } catch(cdnErr) {
-        console.warn('jsDelivr failed, trying unpkg:', cdnErr.message);
-        await loadScript('https://unpkg.com/@mediapipe/tasks-vision@0.10.9/vision_bundle.js');
-      }
-    }
-    if (typeof vision !== 'undefined' && vision.FaceLandmarker) {
-      window.FaceLandmarker = vision.FaceLandmarker;
-      window.FilesetResolver = vision.FilesetResolver;
-    }
-    if (typeof FaceLandmarker === 'undefined') throw new Error('FaceLandmarker not exported by bundle');
+    const mp = await import('./lib/vision_bundle.mjs');
+    window.FaceLandmarker = mp.FaceLandmarker;
+    window.FilesetResolver = mp.FilesetResolver;
     await initTracker();
   } catch(e) {
     console.error('Tracker load error:', e);
@@ -362,7 +345,7 @@ async function initTracker() {
   try {
     showStatus('Downloading face model…');
     const filesetResolver = await FilesetResolver.forVisionTasks(
-      'https://cdn.jsdelivr.net/npm/@mediapipe/tasks-vision@0.10.9/wasm'
+      './lib/wasm'
     );
     const mpOpts = (delegate) => ({
       baseOptions: {
