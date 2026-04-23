@@ -479,12 +479,16 @@ function startLoop() {
 function B(W,H,fd) {
   const x=fd.x*W, y=fd.y*H, w=fd.w*W, h=fd.h*H;
   const lm = fd.landmarks;
-  const base = {x,y,w,h,cx:x+w/2,cy:y+h/2,top:y,bot:y+h,s:w,lm};
+  const base = {x,y,w,h,cx:x+w/2,cy:y+h/2,top:y,bot:y+h,s:w,lm,roll:0,eyeY:y+h/2};
   if (lm) {
-    base.cx     = (lm.leftEye.x + lm.rightEye.x) / 2;
-    base.eyeY   = (lm.leftEye.y + lm.rightEye.y) / 2;
-    base.eyeDist = Math.abs(lm.rightEye.x - lm.leftEye.x);
-    base.s      = base.eyeDist * 2.8;
+    const cx0=(lm.leftEye.x+lm.rightEye.x)/2;
+    const ey0=(lm.leftEye.y+lm.rightEye.y)/2;
+    base.cx=cx0; base.eyeY=ey0;
+    base.eyeDist=Math.abs(lm.rightEye.x-lm.leftEye.x);
+    base.s=base.eyeDist*2.8;
+    const r=Math.atan2(lm.rightEye.y-lm.leftEye.y,lm.rightEye.x-lm.leftEye.x);
+    base.roll=r;
+    if(Math.abs(r)>0.005){const c=Math.cos(-r),sn=Math.sin(-r);const rp=(pt)=>{const dx=pt.x-cx0,dy=pt.y-ey0;return{x:cx0+dx*c-dy*sn,y:ey0+dx*sn+dy*c};};base.lm=Object.fromEntries(Object.entries(lm).map(([k,v])=>[k,rp(v)]));}
   }
   return base;
 }
@@ -492,8 +496,9 @@ function B(W,H,fd) {
 // ─── All filter drawing ───────────────────────────────────────────────────────
 function drawFilter(W, H, fd) {
   const f=activeFilter, int=intensity, t=time;
-  const {x,y,w,h,cx,cy,top,bot,s,lm} = B(W,H,fd);
+  const {x,y,w,h,cx,cy,top,bot,s,lm,roll,eyeY} = B(W,H,fd);
   const hasLM = !!lm;
+  if(hasLM&&Math.abs(roll)>0.005){ctx.save();ctx.translate(cx,eyeY);ctx.rotate(roll);ctx.translate(-cx,-eyeY);}
 
   // ── ANIMAL FILTERS ──
   if (f==='dog') {
@@ -827,6 +832,7 @@ function drawFilter(W, H, fd) {
       else if(pixelCache.imageData){ctx.save();ctx.globalAlpha=int;ctx.putImageData(pixelCache.imageData,rx,ry2);ctx.restore();}
     }
   }
+  if(hasLM&&Math.abs(roll)>0.005)ctx.restore();
 }
 
 // ─── Snap / Save ─────────────────────────────────────────────────────────────
